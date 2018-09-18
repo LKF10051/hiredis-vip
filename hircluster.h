@@ -98,11 +98,12 @@ typedef struct redisClusterContext {
 
     int need_update_route;
     int64_t update_route_time;
+    char pwd[128];
 } redisClusterContext;
 
 redisClusterContext *redisClusterConnect(const char *addrs, int flags);
 redisClusterContext *redisClusterConnectWithTimeout(const char *addrs, 
-    const struct timeval tv, int flags);
+    const struct timeval tv, int flags, const char *pwd);
 redisClusterContext *redisClusterConnectNonBlock(const char *addrs, int flags);
 
 redisClusterContext *redisClusterContextInit(void);

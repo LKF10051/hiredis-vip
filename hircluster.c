@@ -1298,6 +1298,12 @@ cluster_update_route_by_addr(redisClusterContext *cc,
         redisSetTimeout(c, *cc->timeout);
     }
 
+    if (c->err == 0)
+    {
+        reply = redisCommand(c, "AUTH %s", cc->pwd);
+        freeReplyObject(reply);
+    }
+
     if(cc->flags & HIRCLUSTER_FLAG_ROUTE_USE_SLOTS){
         reply = redisCommand(c, REDIS_COMMAND_CLUSTER_SLOTS);
         if(reply == NULL){
@@ -2029,6 +2035,7 @@ redisClusterContext *redisClusterContextInit(void) {
     cc->update_route_time = 0LL;
 
     cc->route_version = 0LL;
+    cc->pwd[0] = '\0';
 
     memset(cc->table, 0, REDIS_CLUSTER_SLOTS*sizeof(cluster_node *));
 
@@ -2134,11 +2141,13 @@ redisClusterContext *redisClusterConnect(const char *addrs, int flags)
 }
 
 redisClusterContext *redisClusterConnectWithTimeout(
-    const char *addrs, const struct timeval tv, int flags)
+    const char *addrs, const struct timeval tv, int flags, const char *pwd)
 {
     redisClusterContext *cc;
 
     cc = redisClusterContextInit();
+    memset(cc->pwd, '\0', strlen(cc->pwd));
+    memcpy(cc->pwd, pwd, strlen(pwd));
 
     if(cc == NULL)
     {
@@ -2477,13 +2486,21 @@ redisContext *ctx_get_by_node(redisClusterContext *cc, cluster_node *node)
     c = node->con;
     if(c != NULL)
     {
+        int reconnected = 0;
         if(c->err)
         {
+            reconnected = 1;
             redisReconnect(c);
 
             if (cc->timeout && c->err == 0) {
                 redisSetTimeout(c, *cc->timeout);
             }
+        }
+        if (c->err == 0 && reconnected == 1)
+        {
+            void *reply = NULL;
+            reply = redisCommand(c, "AUTH %s", cc->pwd);
+            freeReplyObject(reply);
         }
 
         return c;
@@ -2505,6 +2522,13 @@ redisContext *ctx_get_by_node(redisClusterContext *cc, cluster_node *node)
 
     if (cc->timeout && c != NULL && c->err == 0) {
         redisSetTimeout(c, *cc->timeout);
+    }
+
+    if (c->err == 0)
+    {
+        void *reply = NULL;
+        reply = redisCommand(c, "AUTH %s", cc->pwd);
+        freeReplyObject(reply);
     }
 
     node->con = c;

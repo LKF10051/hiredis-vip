@@ -1,4 +1,11 @@
 
+
+20180918修改： 集群可用密码登陆：
+
+redisClusterConnectWithTimeout 接口加入 pwd 参数。
+
+
+
 # HIREDIS-VIP
 
 Hiredis-vip is a C client library for the [Redis](http://redis.io/) database.
